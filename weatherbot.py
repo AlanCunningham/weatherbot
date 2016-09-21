@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import telegram
 import logging
 import signal
@@ -21,15 +23,18 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 weather = weather.Weather()
 is_running = True
 
+message_groups = []
 
 # Run start() when bot receives the /start command
 dispatcher = updater.dispatcher
 started = False
 def start(bot, update):
 	global started
-	if started == False:
+	if update.message.chat_id not in message_groups:
+		message_groups.append(update.message.chat_id)
 		send_message(bot, update, '**INITIALISING**')
 		print('Message ID: %s ' % update.message.chat_id)
+		print('Message groups: %s ' % message_groups)
 		# Schedule a weather report at a certain time
 		my_schedule = schedule.every().day.at('08:00').do(get_weather, bot, update)
 		# Run the scheduler in the background
@@ -54,10 +59,12 @@ def run_scheduler(my_schedule):
 def get_weather(bot, update):
 	global weather
 	daily_weather = weather.get_daily_weather()
+	temp_low = int(round(daily_weather['apparentTemperatureMin']))
+	temp_high = int(round(daily_weather['apparentTemperatureMax']))
 	clothes_suggestion = weather.suggest_clothes()
-	full_summary = 'Today will have highs of %s and lows of %s, %s\n\n%s.' % (
-					daily_weather['apparentTemperatureMax'],
-					daily_weather['apparentTemperatureMin'],
+	full_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
+					temp_high, unichr(176), # Degrees symbol
+					temp_low, unichr(176), # Degrees symbol
 					daily_weather['summary'].lower(),
 					clothes_suggestion)
 	send_message(bot, update, full_summary)
