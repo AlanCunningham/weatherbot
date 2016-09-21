@@ -13,7 +13,7 @@ from telegram.ext import Updater
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 
-token = 'telegram_bot_api_key_here'
+token = ''
 updater = Updater(token=token)
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -21,18 +21,19 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 weather = weather.Weather()
 is_running = True
 
+
 # Run start() when bot receives the /start command
 dispatcher = updater.dispatcher
 started = False
 def start(bot, update):
 	global started
 	if started == False:
-		send_message(bot, update, '***BOOTING UP***')
+		send_message(bot, update, '**INITIALISING**')
 		print('Message ID: %s ' % update.message.chat_id)
 		# Schedule a weather report at a certain time
-		schedule.every().day.at('08:00').do(get_weather, bot, update)
+		my_schedule = schedule.every().day.at('08:00').do(get_weather, bot, update)
 		# Run the scheduler in the background
-		t = threading.Thread(target=run_scheduler, args=(schedule,))
+		t = threading.Thread(target=run_scheduler, args=(my_schedule,))
 		t.daemon = True
 		t.start()
 
@@ -43,7 +44,7 @@ dispatcher.add_handler(start_handler)
 
 
 # Weather scheduler
-def run_scheduler(schedule):
+def run_scheduler(my_schedule):
 	while is_running:
 		schedule.run_pending()
 		time.sleep(1)
@@ -54,19 +55,31 @@ def get_weather(bot, update):
 	global weather
 	daily_weather = weather.get_daily_weather()
 	clothes_suggestion = weather.suggest_clothes()
-	full_summary = 'Today will have highs of %s and lows of %s, %s\n\n%s' % (
+	full_summary = 'Today will have highs of %s and lows of %s, %s\n\n%s.' % (
 					daily_weather['apparentTemperatureMax'],
 					daily_weather['apparentTemperatureMin'],
 					daily_weather['summary'].lower(),
 					clothes_suggestion)
 	send_message(bot, update, full_summary)
 
+weather_handler = CommandHandler('weather', get_weather)
+dispatcher.add_handler(weather_handler)
 
-def echo(bot, update):
-	send_message(bot, update, update.message.text)
 
-echo_handler = MessageHandler([Filters.text], echo)
-dispatcher.add_handler(echo_handler)
+# Respond to certain keywords in the chat
+# There's most likely a better way of doing this...
+def custom_responses(bot, update):
+	global greeting_timeout
+	message = update.message.text.lower()
+	if 'hi sam' == message:
+		send_message(bot, update, '**HELLO THERE**')
+	if 'sam' == message:
+		send_message(bot, update, '**WHAT**')
+	if 'red lion' in message:
+		send_message(bot, update, 'Which one?')
+
+custom_responses = MessageHandler([Filters.text], custom_responses)
+dispatcher.add_handler(custom_responses)
 
 
 def send_message(bot, update, text):
