@@ -23,25 +23,23 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 is_running = True
 message_groups = []
 weather_timeout = 3600
-response_timeout = 10
+response_timeout = 20
+weather_summary = None
 
 # Run start() when bot receives the /start command
 dispatcher = updater.dispatcher
-started = False
 def start(bot, update):
-	global started
 	if update.message.chat_id not in message_groups:
 		message_groups.append(update.message.chat_id)
 		send_message(bot, update, '**INITIALISING**')
-		print('Message ID: %s ' % update.message.chat_id)
-		print('Message groups: %s ' % message_groups)
+		logging.info('Message ID: %s ', update.message.chat_id)
+		logging.info('Message groups: %s ', message_groups)
 		# Schedule a weather report at a certain time
-		schedule.every().day.at('08:00').do(get_weather, bot, update)
+		schedule.every().day.at('08:00').do(request_weather, bot, update)
 		# Run the scheduler in the background
 		t = threading.Thread(target=run_scheduler)
 		t.daemon = True
 		t.start()
-		started = True
 
 start_handler = CommandHandler('start', start)
 dispatcher.add_handler(start_handler)
@@ -55,39 +53,41 @@ def run_scheduler():
 
 
 # Return a daily weather report
-def get_weather(bot, update):
-	global weather_timeout
-	# Prevent /weather command from being spammed
-	if get_timeout_diff(weather_timeout) > 1800:
-		weather = forecast.Weather()
-		daily_weather = weather.get_daily_weather()
-		temp_low = int(round(daily_weather['apparentTemperatureMin']))
-		temp_high = int(round(daily_weather['apparentTemperatureMax']))
-		clothes_suggestion = weather.suggest_clothes()
-		full_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
-						temp_high, unichr(176), # Degrees symbol
-						temp_low, unichr(176), # Degrees symbol
-						daily_weather['summary'].lower(),
-						clothes_suggestion)
-		send_message(bot, update, full_summary)
-		weather_timeout = int(time.time())
+def request_weather(bot, update):
+	global weather_timeout, weather_summary
+	# Update the weather if we haven't requested it in a while.
+	# If we've recently requested the weather, we just return the cached version
+	try:
+		if get_timeout_diff(weather_timeout) > 900:
+			logging.debug('Getting weather - new')
+			weather = forecast.Weather()
+			daily_weather = weather.get_daily_weather()
+			temp_low = int(round(daily_weather['apparentTemperatureMin']))
+			temp_high = int(round(daily_weather['apparentTemperatureMax']))
+			clothes_suggestion = weather.suggest_clothes()
+			weather_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
+							temp_high, unichr(176), # Degrees symbol
+							temp_low, unichr(176), # Degrees symbol
+							daily_weather['summary'].lower(),
+							clothes_suggestion)
+			weather_timeout = int(time.time())
+	except:
+		send_message(bot, update, 'Something went horribly wrong - try again')
+	send_message(bot, update, weather_summary)
 
-weather_handler = CommandHandler('weather', get_weather)
+weather_handler = CommandHandler('weather', request_weather)
 dispatcher.add_handler(weather_handler)
-
 
 # Respond to certain keywords in the chat
 # There's most likely a better way of doing this...
 def custom_responses(bot, update):
 	global response_timeout
-
-	# Prevent spam
+	message = update.message.text.lower()
+	if 'hi sam' == message:
+		send_message(bot, update, '**HELLO THERE**')
+	if 'sam' == message:
+		send_message(bot, update, '**WHAT**')
 	if get_timeout_diff(response_timeout) > 20:
-		message = update.message.text.lower()
-		if 'hi sam' == message:
-			send_message(bot, update, '**HELLO THERE**')
-		if 'sam' == message:
-			send_message(bot, update, '**WHAT**')
 		if 'red lion' in message:
 			send_message(bot, update, 'Which one?')
 		response_timeout = int(time.time())
@@ -100,7 +100,6 @@ dispatcher.add_handler(custom_responses)
 def get_timeout_diff(timestamp):
 	now = int(time.time())
 	diff = now - timestamp
-	print('Timeout %s ' % diff)
 	return diff
 
 
