@@ -1,7 +1,6 @@
 # Author: Alan Cunningham
 # Date 30/05/2016
 
-from django.conf import settings
 import requests
 import json
 from datetime import datetime
