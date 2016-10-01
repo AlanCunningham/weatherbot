@@ -30,12 +30,9 @@ weather_summary = None
 dispatcher = updater.dispatcher
 def start(bot, update):
 	if update.message.chat_id not in message_groups:
-		message_groups.append(update.message.chat_id)
 		send_message(bot, update, '**INITIALISING**')
-		logging.info('Message ID: %s ', update.message.chat_id)
-		logging.info('Message groups: %s ', message_groups)
 		# Schedule a weather report at a certain time
-		schedule.every().day.at('08:00').do(request_weather, bot, update)
+		schedule.every().day.at('08:00').do(schedule_weather, message_groups, bot, update)
 		# Run the scheduler in the background
 		t = threading.Thread(target=run_scheduler)
 		t.daemon = True
@@ -52,30 +49,57 @@ def run_scheduler():
 		time.sleep(1)
 
 
+# Subscribe a group to scheduled weather updates
+def schedule_on(bot, update):
+	if update.message.chat_id not in message_groups:
+		message_groups.append(update.message.chat_id)
+		send_message(bot, update, '**SCHEDULE ENABLED**')
+	logging.info('Message groups: %s ' % message_groups)
+
+
+schedule_on_handler = CommandHandler('schedule_on', schedule_on)
+dispatcher.add_handler(schedule_on_handler)
+
+
+# Unsubscribe a group from scheduled weather updates
+def schedule_off(bot, update):
+	if update.message.chat_id in message_groups:
+		message_groups.remove(update.message.chat_id)
+		send_message(bot, update, '**SCHEDULE DISABLED**')
+	logging.info('Message groups: %s ' % message_groups)
+
+schedule_off_handler = CommandHandler('schedule_off', schedule_off)
+dispatcher.add_handler(schedule_off_handler)
+
+
+def schedule_weather(bot, update):
+	for group in message_groups:
+		summary = request_weather()
+		logging.info('Group: %s ' % group)
+		bot.sendMessage(chat_id=group, text=request_weather())
+
+
 # Return a daily weather report
-def request_weather(bot, update):
+def request_weather():
 	global weather_timeout, weather_summary
 	# Update the weather if we haven't requested it in a while.
 	# If we've recently requested the weather, we just return the cached version
-	try:
-		if get_timeout_diff(weather_timeout) > 900:
-			logging.debug('Getting weather - new')
-			weather = forecast.Weather()
-			daily_weather = weather.get_daily_weather()
-			temp_low = int(round(daily_weather['apparentTemperatureMin']))
-			temp_high = int(round(daily_weather['apparentTemperatureMax']))
-			clothes_suggestion = weather.suggest_clothes()
-			weather_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
-							temp_high, unichr(176), # Degrees symbol
-							temp_low, unichr(176), # Degrees symbol
-							daily_weather['summary'].lower(),
-							clothes_suggestion)
-			weather_timeout = int(time.time())
-	except:
-		send_message(bot, update, 'Something went horribly wrong - try again')
-	send_message(bot, update, weather_summary)
+	if get_timeout_diff(weather_timeout) > 900:
+		logging.debug('Getting weather - new')
+		weather = forecast.Weather()
+		daily_weather = weather.get_daily_weather()
+		temp_low = int(round(daily_weather['apparentTemperatureMin']))
+		temp_high = int(round(daily_weather['apparentTemperatureMax']))
+		clothes_suggestion = weather.suggest_clothes()
+		weather_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
+						temp_high, unichr(176), # Degrees symbol
+						temp_low, unichr(176), # Degrees symbol
+						daily_weather['summary'].lower(),
+						clothes_suggestion)
+		weather_timeout = int(time.time())
+	return weather_summary
 
-weather_handler = CommandHandler('weather', request_weather)
+weather_handler = CommandHandler('weather', lambda x,y: send_message(x, y, request_weather()))
 dispatcher.add_handler(weather_handler)
 
 # Respond to certain keywords in the chat
@@ -87,7 +111,7 @@ def custom_responses(bot, update):
 		send_message(bot, update, '**HELLO THERE**')
 	if 'sam' == message:
 		send_message(bot, update, '**WHAT**')
-	if get_timeout_diff(response_timeout) > 20:
+	if get_timeout_diff(response_timeout) > 900:
 		if 'red lion' in message:
 			send_message(bot, update, 'Which one?')
 		response_timeout = int(time.time())

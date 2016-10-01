@@ -66,7 +66,7 @@ class Weather:
 			suggestions.append("some shorts")
 
 		# Rain
-		if rain_chance > 0.5:
+		if rain_chance > 0.4:
 			suggestions.append(". Bring an umbrella")
 
 		suggestion = "Wear " + "".join(suggestions)
