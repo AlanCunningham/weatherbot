@@ -44,7 +44,7 @@ def custom_responses(bot, update):
 	if get_timeout_diff(response_timeout) > 900:
 		if 'red lion' in message:
 			send_message(bot, update, 'Which one?')
-		response_timeout = int(time.time())
+			response_timeout = int(time.time())
 
 custom_responses = MessageHandler([Filters.text], custom_responses)
 dispatcher.add_handler(custom_responses)
