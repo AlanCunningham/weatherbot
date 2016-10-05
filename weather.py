@@ -56,11 +56,11 @@ class Weather:
 
 		# We should extract these out into something configurable
 		# Temperature based
-		if avg_temp < 14:
+		if avg_temp < 10:
 			suggestions.append("a coat")
-		elif avg_temp > 14 and avg_temp < 17:
+		elif avg_temp >= 10 and avg_temp < 17:
 			suggestions.append("a jumper or shirt")
-		elif avg_temp > 17 and avg_temp < 20:
+		elif avg_temp >= 17 and avg_temp < 20:
 			suggestions.append("a t-shirt")
 		else:
 			suggestions.append("some shorts")
