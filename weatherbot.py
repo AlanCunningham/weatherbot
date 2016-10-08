@@ -108,30 +108,34 @@ def send_scheduled_weather(bot, update):
 				bot.sendMessage(chat_id=group, text=summary)
 
 
-# Return a daily weather report
 def get_weather():
-	global weather_timeout, weather_summary, spam_timeout
+	global weather_timeout, weather_summary
+	# Update the weather if we haven't requested it in a while.
+	# If we've recently requested the weather, we just return the cached version
+	if get_timeout_diff(weather_timeout) > 900:
+		logging.debug('Getting weather - new')
+		weather = forecast.Weather()
+		daily_weather = weather.get_daily_weather()
+		temp_low = int(round(daily_weather['apparentTemperatureMin']))
+		temp_high = int(round(daily_weather['apparentTemperatureMax']))
+		clothes_suggestion = weather.suggest_clothes()
+		weather_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
+						temp_high, unichr(176), # Degrees symbol
+						temp_low, unichr(176), # Degrees symbol
+						daily_weather['summary'].lower(),
+						clothes_suggestion)
+		weather_timeout = int(time.time())
+	return weather_summary
 
+
+def weather_command(bot, update):
+	global spam_timeout
 	if get_timeout_diff(spam_timeout) > 30:
+		send_message(bot, update, get_weather())
 		spam_timeout = int(time.time())
-		# Update the weather if we haven't requested it in a while.
-		# If we've recently requested the weather, we just return the cached version
-		if get_timeout_diff(weather_timeout) > 900:
-			logging.debug('Getting weather - new')
-			weather = forecast.Weather()
-			daily_weather = weather.get_daily_weather()
-			temp_low = int(round(daily_weather['apparentTemperatureMin']))
-			temp_high = int(round(daily_weather['apparentTemperatureMax']))
-			clothes_suggestion = weather.suggest_clothes()
-			weather_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
-							temp_high, unichr(176), # Degrees symbol
-							temp_low, unichr(176), # Degrees symbol
-							daily_weather['summary'].lower(),
-							clothes_suggestion)
-			weather_timeout = int(time.time())
-		return weather_summary
 
-weather_handler = CommandHandler('weather', lambda x, y: send_message(x, y, get_weather()))
+
+weather_handler = CommandHandler('weather', weather_command)
 dispatcher.add_handler(weather_handler)
 
 
