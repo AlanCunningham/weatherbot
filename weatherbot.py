@@ -31,13 +31,21 @@ dispatcher = updater.dispatcher
 # There's most likely a better way of doing this...
 def custom_responses(bot, update):
 	global response_timeout
+	thumbs_up = '\xF0\x9F\x91\x8D'
+
 	# Start the scheduler on startup
 	start_scheduler(bot, update)
 	message = update.message.text.lower()
-	if 'hi sam' == message:
-		send_message(bot, update, '**HELLO THERE**')
-	if 'sam' == message:
-		send_message(bot, update, 'What')
+
+	responses = {
+		'hi sam': '**HELLO THERE**',
+		'sam': 'What',
+		'thanks sam': thumbs_up
+	}
+
+	if message in responses:
+		send_message(bot, update, responses[message])
+
 	if get_timeout_diff(response_timeout) > 900:
 		if 'red lion' in message:
 			send_message(bot, update, 'Which one?')
@@ -79,7 +87,7 @@ def subscribe_group(bot, update):
 		}
 	else:
 		message_groups[update.message.chat_id]['subscribed'] = True
-		send_message(bot, update, '**SUBSCRIBED**')
+		# send_message(bot, update, '**SUBSCRIBED**')
 	logging.info('Message groups: %s ' % message_groups)
 
 
@@ -91,7 +99,7 @@ dispatcher.add_handler(subscribe_group_handler)
 def unsubscribe_group(bot, update):
 	global message_groups
 	message_groups[update.message.chat_id]['subscribed'] = False
-	send_message(bot, update, '**UNSUBSCRIBED**')
+	# send_message(bot, update, '**UNSUBSCRIBED**')
 	logging.info('Message groups: %s ' % message_groups)
 
 unsubscribe_group_handler = CommandHandler('unsubscribe', unsubscribe_group)
