@@ -7,6 +7,8 @@ import schedule
 import time
 import weather as forecast
 import threading
+import random
+import time
 
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
@@ -121,19 +123,54 @@ def get_weather():
 	# Update the weather if we haven't requested it in a while.
 	# If we've recently requested the weather, we just return the cached version
 	if get_timeout_diff(weather_timeout) > 900:
-		logging.debug('Getting weather - new')
+		logging.info('Getting weather - new')
 		weather = forecast.Weather()
+
+		current_hour = time.strftime('%H')
+		logging.info('Time: %s', current_hour)
 		daily_weather = weather.get_daily_weather()
-		temp_low = int(round(daily_weather['apparentTemperatureMin']))
-		temp_high = int(round(daily_weather['apparentTemperatureMax']))
+		hourly_weather = weather.get_hourly_weather()
+		morning_avg = get_average_temp(hourly_weather, 8, 12)
+		afternoon_avg = get_average_temp(hourly_weather, 12, 17)
+		evening_avg = get_average_temp(hourly_weather, 17, 23)
+
+		# current_hour = 18
+		if current_hour >= 6 and current_hour < 12:
+			hourly_summary = \
+				'This morning will be about %s%s, with %s%s in the afternoon ' \
+				'and %s%s in the evening' % (
+				morning_avg, unichr(176),
+				afternoon_avg, unichr(176),
+				evening_avg, unichr(176))
+		elif current_hour >= 12 and current_hour < 17:
+			hourly_summary = \
+				'This afternoon will be about %s%s and %s%s in the evening' % \
+				(afternoon_avg, unichr(176),
+				evening_avg, unichr(176))
+		elif current_hour >= 17 and current_hour <= 23:
+			hourly_summary = \
+				'This evening will be about %s%s' % (evening_avg, unichr(176))
+		else:
+			current_temp = int(round(hourly_weather[int(current_hour)]['apparentTemperature']))
+			hourly_summary = "It's about %s%s right now" % (current_temp, unichr(176))
+
+		logging.info('Hourly weather: %s', hourly_summary)
 		clothes_suggestion = weather.suggest_clothes()
-		weather_summary = 'Today will have highs of %s%s and lows of %s%s, %s\n\n%s.' % (
-						temp_high, unichr(176), # Degrees symbol
-						temp_low, unichr(176), # Degrees symbol
-						daily_weather['summary'].lower(),
-						clothes_suggestion)
+		weather_summary = '%s. %s\n\n%s.' % (
+			hourly_summary,
+			daily_weather['summary'],
+			clothes_suggestion)
 		weather_timeout = int(time.time())
 	return weather_summary
+
+
+def get_average_temp(hourly_weather, start_time, end_time):
+	temps = []
+	while start_time <= end_time:
+		temps.append(hourly_weather[start_time]['apparentTemperature'])
+		start_time += 1
+	logging.info('temps %s', temps)
+	return int(round(sum(temps) / len(temps)))
 
 
 def weather_command(bot, update):
