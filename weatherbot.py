@@ -126,15 +126,16 @@ def get_weather():
 		logging.info('Getting weather - new')
 		weather = forecast.Weather()
 
-		current_hour = time.strftime('%H')
+		current_hour = int(time.strftime('%H'))
+		# current_hour = 19
 		logging.info('Time: %s', current_hour)
+
 		daily_weather = weather.get_daily_weather()
 		hourly_weather = weather.get_hourly_weather()
 		morning_avg = get_average_temp(hourly_weather, 8, 12)
 		afternoon_avg = get_average_temp(hourly_weather, 12, 17)
 		evening_avg = get_average_temp(hourly_weather, 17, 23)
 
-		# current_hour = 18
 		if current_hour >= 6 and current_hour < 12:
 			hourly_summary = \
 				'This morning will be about %s%s, with %s%s in the afternoon ' \
@@ -151,7 +152,7 @@ def get_weather():
 			hourly_summary = \
 				'This evening will be about %s%s' % (evening_avg, unichr(176))
 		else:
-			current_temp = int(round(hourly_weather[int(current_hour)]['apparentTemperature']))
+			current_temp = int(round(hourly_weather[(current_hour)]['apparentTemperature']))
 			hourly_summary = "It's about %s%s right now" % (current_temp, unichr(176))
 
 		logging.info('Hourly weather: %s', hourly_summary)
