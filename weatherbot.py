@@ -138,22 +138,22 @@ def get_weather():
 
 		if current_hour >= 6 and current_hour < 12:
 			hourly_summary = \
-				'This morning will be about %s%s, with %s%s in the afternoon ' \
+				'Expect %s%s in the morning, %s%s in the afternoon ' \
 				'and %s%s in the evening' % (
 				morning_avg, unichr(176),
 				afternoon_avg, unichr(176),
 				evening_avg, unichr(176))
 		elif current_hour >= 12 and current_hour < 17:
 			hourly_summary = \
-				'This afternoon will be about %s%s and %s%s in the evening' % \
+				'Expect %s%s in the afternoon and %s%s in the evening' % \
 				(afternoon_avg, unichr(176),
 				evening_avg, unichr(176))
 		elif current_hour >= 17 and current_hour <= 23:
 			hourly_summary = \
-				'This evening will be about %s%s' % (evening_avg, unichr(176))
+				'Expect %s%s this evening' % (evening_avg, unichr(176))
 		else:
 			current_temp = int(round(hourly_weather[(current_hour)]['apparentTemperature']))
-			hourly_summary = "It's about %s%s right now" % (current_temp, unichr(176))
+			hourly_summary = "It's %s%s right now" % (current_temp, unichr(176))
 
 		logging.info('Hourly weather: %s', hourly_summary)
 		clothes_suggestion = weather.suggest_clothes()
