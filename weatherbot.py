@@ -9,13 +9,16 @@ import weather as forecast
 import threading
 import random
 import time
+import ConfigParser
 
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 
-token = ''
-updater = Updater(token=token)
+
+config = ConfigParser.ConfigParser()
+config.read('config.py')
+updater = Updater(token=config.get('telegram', 'api_key'))
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 

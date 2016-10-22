@@ -6,18 +6,20 @@ import json
 from datetime import datetime
 import time
 import schedule
+import ConfigParser
 
 class Weather:
 
 	result = None
 
 	def __init__(self):
-		url = "https://api.forecast.io/forecast/"
-
-		api_key = 'darksky_api_key_here'
-		lon = '51.5074'
-		lat = '-0.1278'
-		units = 'uk2'
+		config = ConfigParser.ConfigParser()
+		config.read('config.py')
+		url = "https://api.darksky.net/forecast/"
+		api_key = config.get('darksky', 'api_key')
+		lon = config.get('darksky', 'lon')
+		lat = config.get('darksky', 'lat')
+		units = config.get('darksky', 'units')
 
 		# Make the initial weather request
 		request_url = url + api_key + "/" + lon + "," + lat + "?units=" + units
@@ -38,7 +40,6 @@ class Weather:
 		hourly_weather = self.result["hourly"]["data"]
 		for keys in hourly_weather:
 			keys["time"] = self.convert_epoch(keys["time"])
-
 		return hourly_weather
 
 	def convert_epoch(self, epoch_time):
@@ -56,7 +57,7 @@ class Weather:
 
 		# We should extract these out into something configurable
 		# Temperature based
-		if avg_temp < 10:
+		if avg_temp < 11:
 			suggestions.append("a coat")
 		elif avg_temp >= 10 and avg_temp < 17:
 			suggestions.append("a jumper or shirt")
