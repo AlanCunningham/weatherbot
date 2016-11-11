@@ -115,13 +115,30 @@ def send_scheduled_weather(bot, update):
 	global message_groups
 	for group in message_groups:
 		if message_groups[group]['subscribed'] == True:
-			summary = get_weather()
+			summary = get_rain_forecast()
 			logging.info('Group: %s ' % group)
 			if summary is not None:
 				bot.sendMessage(chat_id=group, text=summary)
 
 
-def get_weather():
+def get_rain_forecast():
+	logging.info('Fetching new weather request')
+	weather = forecast.Weather()
+	daily_weather = weather.get_daily_weather()
+	chance = daily_weather['precipProbability']
+	if chance > 0.5:
+		precip_type = daily_weather['precipType']
+		percentage_chance = int(chance * 100)
+		if precip_type == 'snow':
+			summary = 'It might snow today - call in sick!\n%s%% chance' \
+					% percentage_chance
+		else:
+			summary = 'It might %s today - bring an umbrella.\n%s%% chance' \
+					% (precip_type, percentage_chance)
+		return summary
+
+
+def get_weather_summary():
 	global weather_timeout, weather_summary
 	# Update the weather if we haven't requested it in a while.
 	# If we've recently requested the weather, we just return the cached version
@@ -180,7 +197,7 @@ def get_average_temp(hourly_weather, start_time, end_time):
 def weather_command(bot, update):
 	global spam_timeout
 	if get_timeout_diff(spam_timeout) > 30:
-		send_message(bot, update, get_weather())
+		send_message(bot, update, get_weather_summary())
 		spam_timeout = int(time.time())
 
 
